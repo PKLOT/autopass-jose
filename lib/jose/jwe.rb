@@ -650,6 +650,11 @@ module JOSE
       encrypted_key, jwe = jwe.key_encrypt(key, cek)
       protected_binary = JOSE.urlsafe_encode64(jwe.to_binary)
       if aad.nil?
+        # 台新 OPENX 流程 alg = RSA-OAEP-256, enc = A128CBC-HS256，
+        # 基於轉格式、計算 tag 原因強迫指定 protected_binary 如下行註解：
+        # "eyJlbmMiOiJBMTI4Q0JDLUhTMjU2In0" 等於 JOSE.urlsafe_encode64({"enc"=>"A128CBC-HS256"}.to_json)
+        headers = JSON.parse(jwe.to_binary)
+        protected_binary = "eyJlbmMiOiJBMTI4Q0JDLUhTMjU2In0" if headers['alg'] == "RSA-OAEP-256" && headers['enc'] == "A128CBC-HS256"
         cipher_text, cipher_tag = enc.block_encrypt([protected_binary, jwe.compress(plain_text)], cek, iv)
         return JOSE::EncryptedMap[
           'ciphertext'    => JOSE.urlsafe_encode64(cipher_text),
